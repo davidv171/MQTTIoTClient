@@ -1,13 +1,10 @@
 package com.example.davidv7.mqttiot;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.support.design.widget.TabLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 
 import android.support.v4.app.Fragment;
@@ -23,19 +20,34 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GridLabelRenderer;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
-import com.jjoe64.graphview.series.Series;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -112,8 +124,8 @@ public class MainActivity extends AppCompatActivity {
         private TextView humNow;
         private TextView humLast;
         private TextView tempLast;
-        private TextView dateLast;
         private GraphView graph;
+        private HashMap<Date, String> data;
         /**
          * The fragment argument representing the section number for this
          * fragment.
@@ -140,31 +152,39 @@ public class MainActivity extends AppCompatActivity {
                                  Bundle savedInstanceState) {
 
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+            data = new HashMap<>();
+
             graph = rootView.findViewById(R.id.graph);
             graph.setBackgroundColor(Color.TRANSPARENT);
             graph.setTitleColor(Color.WHITE);
+
             if(getArguments().getInt(ARG_SECTION_NUMBER)==1){
-                //TODO: Save data point
-                //TODO: Get last data point and put it into last... textViews
+                // Save data point
+                // Get last data point and put it into last... textViews
                 //Save date, save temperature for time
                 startMqtt();
+                Date date = Calendar.getInstance().getTime();
                 SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy");
-                String date = df.format(Calendar.getInstance().getTime());
-                graph.setTitle(date);
+                String dateString = df.format(date);
+                graph.setTitle(dateString);
+                //TODO: Add to series from map if the day is today
+                System.out.println("CALLING INIT");
+
                 graph.setTitleTextSize(55);
                 series = new LineGraphSeries<>();
 
 
-
             }
             GridLabelRenderer glr = graph.getGridLabelRenderer();
+            glr.setHorizontalLabelsVisible(false);
             glr.setTextSize(44);
             glr.setGridColor(Color.WHITE);
             glr.setVerticalLabelsColor(Color.WHITE);
             glr.setHorizontalLabelsColor(Color.WHITE);
             tempNow = rootView.findViewById(R.id.tempNow);
             humNow = rootView.findViewById(R.id.humNow);
-            dateLast = rootView.findViewById(R.id.lastTitle);
+            tempLast = rootView.findViewById(R.id.tempLast);
+            humLast = rootView.findViewById(R.id.humLast);
 
             FloatingActionButton fab = rootView.findViewById(R.id.floatingActionButton);
             fab.setOnClickListener(new View.OnClickListener() {
@@ -176,6 +196,9 @@ public class MainActivity extends AppCompatActivity {
 
             return rootView;
         }
+        //Finds today's temperatures and hours in the file
+
+
 
         private void startMqtt() {
             mqttHelper = new MqttHelper(getActivity().getApplicationContext());
@@ -192,21 +215,58 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void messageArrived(String topic, MqttMessage mqttMessage) {
+                    //TODO: Save every message into a file as a hashmap
+                    //Hashmap has the form of (Date,String)
+                    //Date is the date of the measurement, and String is the temperature
+
+
                     Log.w("Debug", mqttMessage.toString());
                     Log.w("Topic",topic);
+
+
                     if(topic.equals("sensor/hum")){
+                        Log.w("Hum","Humidity received ");
+                        humLast.setText(humNow.getText());
                         humNow.setText(mqttMessage.toString());
                     }
                     else {
-                        tempNow.setText(mqttMessage.toString());
+                        tempLast.setText(tempNow.getText());
+
                         int temp = Integer.parseInt(mqttMessage.toString());
-                        series.appendData(new DataPoint(series.getHighestValueX() + 1,temp), true, 100);
+
+                        series.appendData(new DataPoint(series.getHighestValueX()+1,temp), false, 25);
                         series.setAnimated(true);
                         series.setColor(Color.WHITE);
                         if(series.getHighestValueX()>99){
                             series.resetData(new DataPoint[]{new DataPoint(0,temp)});
+                            Toast.makeText(getActivity().getApplicationContext(),"Too many data points, resetting",Toast.LENGTH_SHORT);
                         }
                         graph.addSeries(series);
+                        data.clear();
+                        Date date = Calendar.getInstance().getTime();
+                        Log.w("DATE",date.toString());
+                        System.out.println("DATE " + date);
+                        Date formattedDate=null;
+                        SimpleDateFormat df = new SimpleDateFormat("-mm-hh-dd-MMM-yyyy");
+                        String dateString = df.format(date);
+                        try {
+                            formattedDate = df.parse(dateString);
+                            data.put(formattedDate,mqttMessage.toString());
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                        //append to the temp.mqtt file
+                        System.out.println("DATA SIZE" + data.size());
+                        tempNow.setText(mqttMessage.toString()+"°C");
+                        HashMap<Date,String>dateStringHashMap = new HashMap<>();
+                        dateStringHashMap.put(formattedDate,mqttMessage.toString());
+                        System.out.println(dateStringHashMap.size());
+                        writeFile(formattedDate,mqttMessage.toString());
+                        getData();
+                        // Log.w("Parse test",df.parse(dateString).toString());
+
+
                     }
                     System.out.println("A message has arrived!");
                 }
@@ -218,6 +278,42 @@ public class MainActivity extends AppCompatActivity {
             });
 
         }
+        private void writeFile(Date date, String message){
+            //Read from the file and write it back into the file together with the new
+            //TODO: Optimize this if possible, make it not ask
+            //TODO: Sort by date
+            //Hope there are no errors and that HashMap puts in new elements to the end!
+            try
+            {
+                HashMap<Date,String>tempMap=getData();
+                tempMap.put(date,message);
+                System.out.println("Appended:" +tempMap.toString());
+                FileOutputStream fos = getActivity().getApplicationContext().openFileOutput("map.ser",MODE_PRIVATE);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(tempMap);
+                System.out.println("Written: " +tempMap.toString());
+                oos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        private HashMap<Date,String> getData(){
+            HashMap<Date,String> myHashMap=null;
+            try
+            {
+                FileInputStream fileInputStream = new FileInputStream(getActivity().getApplicationContext().getFilesDir()+"/map.ser");
+                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+                myHashMap = (HashMap<Date, String>) objectInputStream.readObject();
+            }
+            catch(ClassNotFoundException | IOException | ClassCastException e) {
+                e.printStackTrace();
+            }
+            System.out.println("READ: " + myHashMap.toString());
+            return myHashMap;
+        }
+
+
+
     }
 
         /**x

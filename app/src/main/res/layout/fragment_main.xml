@@ -91,7 +91,7 @@
                 android:layout_marginStart="50dp"
                 android:fontFamily="@font/alef_bold"
 
-                android:text="14:30"
+                android:text="Last"
                 android:textColor="@color/cardview_light_background"
                 android:textSize="25dp" />
 
