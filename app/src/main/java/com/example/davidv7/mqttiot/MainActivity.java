@@ -1,9 +1,10 @@
 package com.example.davidv7.mqttiot;
 
-import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.support.design.widget.TabLayout;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
@@ -19,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -166,12 +168,44 @@ public class MainActivity extends AppCompatActivity {
                 Date date = Calendar.getInstance().getTime();
                 SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy");
                 String dateString = df.format(date);
+                Date formattedDate = null;
+                try {
+                    formattedDate = df.parse(dateString);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
                 graph.setTitle(dateString);
                 //TODO: Add to series from map if the day is today
+                //TODO: Check if no data was caught
                 System.out.println("CALLING INIT");
 
                 graph.setTitleTextSize(55);
                 series = new LineGraphSeries<>();
+
+                //TODO: print out today's temperatures out of the file
+                //TODO: put the values into the graph
+                HashMap<Date,String>tempHash;
+                tempHash = getData();
+
+                try{
+                    System.out.println("Today's tempHash:" + tempHash.getOrDefault(formattedDate,""));
+                    for (Map.Entry<Date, String> e : tempHash.entrySet()) {
+                        //TODO: Test this further,
+                        //Both dates need to be the same format!
+                        //day-month-year
+                        System.out.println("Comparing :" + e.getKey().toString()+" ");
+                        System.out.println(date.toString());
+                        //If xx-xx-xxxx == yy-yy-yyyy
+                        if(e.getKey().toString().equals(date.toString())){
+
+                        }
+
+                    }
+
+                }catch (NullPointerException e){
+                    Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT);
+                }
+
 
 
             }
@@ -201,12 +235,14 @@ public class MainActivity extends AppCompatActivity {
 
 
         private void startMqtt() {
-            mqttHelper = new MqttHelper(getActivity().getApplicationContext());
+            mqttHelper = new MqttHelper(getActivity());
+
             mqttHelper.setCallback(new MqttCallbackExtended() {
                 @Override
                 public void connectComplete(boolean b, String s) {
-
+                    System.out.println("Connect complete");
                 }
+
 
                 @Override
                 public void connectionLost(Throwable throwable) {
@@ -278,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
             });
 
         }
+
         private void writeFile(Date date, String message){
             //Read from the file and write it back into the file together with the new
             //TODO: Optimize this if possible, make it not ask
