@@ -155,7 +155,8 @@ public class MainActivity extends AppCompatActivity {
 
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
             data = new HashMap<>();
-
+            HashMap<Date,String>tempHash;
+            tempHash = getData();
             graph = rootView.findViewById(R.id.graph);
             graph.setBackgroundColor(Color.TRANSPARENT);
             graph.setTitleColor(Color.WHITE);
@@ -184,8 +185,8 @@ public class MainActivity extends AppCompatActivity {
 
                 //TODO: print out today's temperatures out of the file
                 //TODO: put the values into the graph
-                HashMap<Date,String>tempHash;
-                tempHash = getData();
+
+                System.out.println("TEMPHASH" + tempHash);
 
                 try{
                     System.out.println("Today's tempHash:" + tempHash.getOrDefault(formattedDate,""));
@@ -196,18 +197,69 @@ public class MainActivity extends AppCompatActivity {
                         System.out.println("Comparing :" + e.getKey().toString()+" ");
                         System.out.println(date.toString());
                         //If xx-xx-xxxx == yy-yy-yyyy
-                        if(e.getKey().toString().equals(date.toString())){
-
+                        int fileDay = e.getKey().getDay();
+                        int fileMonth = e.getKey().getMonth();
+                        int fileYear = e.getKey().getYear();
+                        int nowDay = date.getDay();
+                        int nowMonth = date.getMonth();
+                        int nowYear = date.getYear();
+                        if(fileDay==nowDay&&fileMonth==nowMonth&&fileYear==nowYear){
+                            System.out.println("Temperature" + e.getValue());
+                            int temp = Integer.parseInt(e.getValue());
+                            series.appendData(new DataPoint(series.getHighestValueX()+1,temp),false,25);
+                        }
                         }
 
-                    }
+
 
                 }catch (NullPointerException e){
-                    Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT);
+                    Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT).show();
                 }
 
 
 
+            }
+            if(getArguments().getInt(ARG_SECTION_NUMBER)==2){
+                Date date = Calendar.getInstance().getTime();
+                SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy");
+                String dateString = df.format(date);
+                Date formattedDate = null;
+                try {
+                    formattedDate = df.parse(dateString);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                graph.setTitle(dateString);
+                System.out.println("CALLING INIT");
+
+                graph.setTitleTextSize(55);
+                series = new LineGraphSeries<>();
+
+                try{
+                    System.out.println("Today's tempHash:" + tempHash.getOrDefault(formattedDate,""));
+                    for (Map.Entry<Date, String> e : tempHash.entrySet()) {
+                        //TODO: Test this further,
+                        //Both dates need to be the same format!
+                        //day-month-year
+                        System.out.println("Comparing :" + e.getKey().toString()+" ");
+                        System.out.println(date.toString());
+                        //If xx-xx-xxxx == yy-yy-yyyy
+                        int fileMonth = e.getKey().getMonth();
+                        int fileYear = e.getKey().getYear();
+                        int nowMonth = date.getMonth();
+                        int nowYear = date.getYear();
+                        if(fileMonth==nowMonth&&fileYear==nowYear){
+                            System.out.println("Temperature" + e.getValue());
+                            int temp = Integer.parseInt(e.getValue());
+                            series.appendData(new DataPoint(series.getHighestValueX()+1,temp),false,25);
+                        }
+                    }
+
+
+
+                }catch (NullPointerException e){
+                    Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT).show();
+                }
             }
             GridLabelRenderer glr = graph.getGridLabelRenderer();
             glr.setHorizontalLabelsVisible(false);
