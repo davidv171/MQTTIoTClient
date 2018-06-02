@@ -48,7 +48,6 @@
 
                 android:drawableLeft="@drawable/ic_tmr"
                 android:fontFamily="@font/alef_bold"
-                android:text="35°C"
                 android:textAlignment="textEnd"
                 android:textColor="@color/cardview_light_background"
                 android:textSize="15dp" />
@@ -63,7 +62,6 @@
 
                 android:drawableLeft="@drawable/ic_humidity"
                 android:fontFamily="@font/alef_bold"
-                android:text="32%"
                 android:textAlignment="center"
                 android:textColor="@color/cardview_light_background" />
 
@@ -93,7 +91,8 @@
 
                 android:text="Last"
                 android:textColor="@color/cardview_light_background"
-                android:textSize="25dp" />
+                android:textSize="25dp"
+                android:visibility="visible" />
 
             <TextView
                 android:id="@+id/tempLast"
@@ -104,7 +103,6 @@
                 android:drawableLeft="@drawable/ic_tmr"
 
                 android:fontFamily="@font/alef_bold"
-                android:text="35°C"
                 android:textAlignment="textEnd"
                 android:textColor="@color/cardview_light_background"
                 android:textSize="15dp" />
@@ -119,7 +117,6 @@
 
                 android:drawableLeft="@drawable/ic_humidity"
                 android:fontFamily="@font/alef_bold"
-                android:text="32%"
                 android:textAlignment="center"
                 android:textColor="@color/cardview_light_background" />
 
@@ -178,7 +175,7 @@
             android:layout_marginBottom="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
             android:background="@drawable/rounded_edges"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -202,18 +199,17 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/ic_refresh_black_24dp" />
+                app:srcCompat="@drawable/ic_close_black_24dp" />
 
             <TextView
-                android:id="@+id/textView"
+                android:id="@+id/tempMax"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="9dp"
                 android:layout_marginEnd="8dp"
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
                 android:fontFamily="@font/alef_bold"
-                android:text="40°C"
                 android:textColor="@color/cardview_light_background"
                 android:textSize="24sp"
                 android:textStyle="bold"
@@ -224,7 +220,7 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
-                android:id="@+id/textView2"
+                android:id="@+id/tempMin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
@@ -233,7 +229,6 @@
                 android:layout_marginTop="8dp"
                 android:fontFamily="@font/alef_bold"
 
-                android:text="5°C"
                 android:textColor="@color/cardview_light_background"
                 android:textSize="24sp"
                 android:textStyle="bold"
@@ -258,7 +253,7 @@
                 app:layout_constraintEnd_toStartOf="@+id/floatingActionButton"
                 app:layout_constraintHorizontal_bias="0.52"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView" />
+                app:layout_constraintTop_toBottomOf="@+id/tempMax" />
 
             <TextView
                 android:id="@+id/textView4"
@@ -275,7 +270,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@+id/floatingActionButton"
-                app:layout_constraintTop_toBottomOf="@+id/textView2" />
+                app:layout_constraintTop_toBottomOf="@+id/tempMin" />
 
         </android.support.constraint.ConstraintLayout>
 

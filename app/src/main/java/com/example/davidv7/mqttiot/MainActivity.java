@@ -1,6 +1,8 @@
 package com.example.davidv7.mqttiot;
 
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.support.design.widget.TabLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -32,6 +34,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,9 +48,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -127,8 +132,10 @@ public class MainActivity extends AppCompatActivity {
         private TextView humLast;
         private TextView tempLast;
         private GraphView graph;
-        private HashMap<Date, String> data;
-        /**
+        private LinkedHashMap<Date, String> data;
+        private TextView minTemp;
+        private TextView maxTemp;
+         /**
          * The fragment argument representing the section number for this
          * fragment.
          */
@@ -154,18 +161,24 @@ public class MainActivity extends AppCompatActivity {
                                  Bundle savedInstanceState) {
 
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            data = new HashMap<>();
-            HashMap<Date,String>tempHash;
-            tempHash = getData();
-            graph = rootView.findViewById(R.id.graph);
-            graph.setBackgroundColor(Color.TRANSPARENT);
-            graph.setTitleColor(Color.WHITE);
+                writeFile(Calendar.getInstance().getTime(),"15");
 
+            tempNow = rootView.findViewById(R.id.tempNow);
+            humNow = rootView.findViewById(R.id.humNow);
+            tempLast = rootView.findViewById(R.id.tempLast);
+            humLast = rootView.findViewById(R.id.humLast);
+             maxTemp = rootView.findViewById(R.id.tempMax);
+             minTemp = rootView.findViewById(R.id.tempMin);
             if(getArguments().getInt(ARG_SECTION_NUMBER)==1){
                 // Save data point
                 // Get last data point and put it into last... textViews
                 //Save date, save temperature for time
-                startMqtt();
+                data = new LinkedHashMap<>();
+                LinkedHashMap<Date,String>tempHash;
+                tempHash = getData();
+                graph = rootView.findViewById(R.id.graph);
+                graph.setBackgroundColor(Color.TRANSPARENT);
+                graph.setTitleColor(Color.WHITE);
                 Date date = Calendar.getInstance().getTime();
                 SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy");
                 String dateString = df.format(date);
@@ -183,13 +196,15 @@ public class MainActivity extends AppCompatActivity {
                 graph.setTitleTextSize(55);
                 series = new LineGraphSeries<>();
 
-                //TODO: print out today's temperatures out of the file
-                //TODO: put the values into the graph
+                // print out today's temperatures out of the file
+                // put the values into the graph
 
                 System.out.println("TEMPHASH" + tempHash);
 
                 try{
                     System.out.println("Today's tempHash:" + tempHash.getOrDefault(formattedDate,""));
+                    //Used to find the highest temperature and lowest temperature in the LinkedHashMap
+                    ArrayList<Integer>integerArrayList = new ArrayList<>();
                     for (Map.Entry<Date, String> e : tempHash.entrySet()) {
                         //TODO: Test this further,
                         //Both dates need to be the same format!
@@ -197,29 +212,62 @@ public class MainActivity extends AppCompatActivity {
                         System.out.println("Comparing :" + e.getKey().toString()+" ");
                         System.out.println(date.toString());
                         //If xx-xx-xxxx == yy-yy-yyyy
-                        int fileDay = e.getKey().getDay();
+                        int fileDay = e.getKey().getDate();
                         int fileMonth = e.getKey().getMonth();
                         int fileYear = e.getKey().getYear();
-                        int nowDay = date.getDay();
+                        int nowDay = date.getDate();
+                        System.out.println("Comparing days" + fileDay + " " + nowDay);
                         int nowMonth = date.getMonth();
                         int nowYear = date.getYear();
                         if(fileDay==nowDay&&fileMonth==nowMonth&&fileYear==nowYear){
                             System.out.println("Temperature" + e.getValue());
                             int temp = Integer.parseInt(e.getValue());
-                            series.appendData(new DataPoint(series.getHighestValueX()+1,temp),false,25);
+                            integerArrayList.add(Integer.parseInt(e.getValue()));
+
+                            series.appendData(new DataPoint(series.getHighestValueX()+1,temp),false,25000);
                         }
                         }
 
+                    int min = Collections.min(integerArrayList);
+                    int max = Collections.max(integerArrayList);
+
+                    maxTemp.setText(String.valueOf(max));
+                    minTemp.setText(String.valueOf(min));
 
 
                 }catch (NullPointerException e){
                     Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT).show();
                 }
 
+                GridLabelRenderer glr = graph.getGridLabelRenderer();
+                glr.setHorizontalLabelsVisible(false);
+                glr.setTextSize(44);
+                glr.setGridColor(Color.WHITE);
+                glr.setVerticalLabelsColor(Color.WHITE);
+                glr.setHorizontalLabelsColor(Color.WHITE);
+                startMqtt();
 
 
             }
             if(getArguments().getInt(ARG_SECTION_NUMBER)==2){
+                final SharedPreferences sharedPref = getActivity().getApplicationContext().getSharedPreferences("prefs",Context.MODE_PRIVATE);
+                sharedPref.registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
+                    @Override
+                    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                        tempNow.setText(sharedPref.getString("tempNow","0"));
+                        humNow.setText(sharedPref.getString("humNow","0"));
+                        tempLast.setText(sharedPref.getString("tempLast","0"));
+                        humLast.setText(sharedPref.getString("humLast","0"));
+                    }
+                });
+
+                System.out.println("TEMP NOW IN SECTION 2" + tempNow.getText());
+                data = new LinkedHashMap<>();
+                LinkedHashMap<Date,String>tempHash;
+                tempHash = getData();
+                graph = rootView.findViewById(R.id.graph);
+                graph.setBackgroundColor(Color.TRANSPARENT);
+                graph.setTitleColor(Color.WHITE);
                 Date date = Calendar.getInstance().getTime();
                 SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy");
                 String dateString = df.format(date);
@@ -229,54 +277,145 @@ public class MainActivity extends AppCompatActivity {
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
-                graph.setTitle(dateString);
+                Calendar calendar = Calendar.getInstance();
+                int month = calendar.get(Calendar.MONTH) + 1;
+                int year = calendar.get(Calendar.YEAR);
+                graph.setTitle(month + "-" + year);
                 System.out.println("CALLING INIT");
 
                 graph.setTitleTextSize(55);
                 series = new LineGraphSeries<>();
-
+                //ArrayList used to take out each temperature out of tempHash to then calculate the minimum and maximum
+                ArrayList<Integer>integerArrayList= new ArrayList<>();
                 try{
                     System.out.println("Today's tempHash:" + tempHash.getOrDefault(formattedDate,""));
+                    double i =0.000;
                     for (Map.Entry<Date, String> e : tempHash.entrySet()) {
                         //TODO: Test this further,
                         //Both dates need to be the same format!
                         //day-month-year
                         System.out.println("Comparing :" + e.getKey().toString()+" ");
                         System.out.println(date.toString());
+                        i++;
+                        System.out.println("DoubleT" + i);
                         //If xx-xx-xxxx == yy-yy-yyyy
+                        int fileDay = e.getKey().getDate();
                         int fileMonth = e.getKey().getMonth();
                         int fileYear = e.getKey().getYear();
                         int nowMonth = date.getMonth();
                         int nowYear = date.getYear();
+                        System.out.println("fileday"+ fileDay);
+
                         if(fileMonth==nowMonth&&fileYear==nowYear){
-                            System.out.println("Temperature" + e.getValue());
+                            integerArrayList.add(Integer.parseInt(e.getValue()));
+                            System.out.println("LinkedHashMap read: " + e.getKey() + " Temperature" + e.getValue());
                             int temp = Integer.parseInt(e.getValue());
-                            series.appendData(new DataPoint(series.getHighestValueX()+1,temp),false,25);
+                            series.appendData(new DataPoint(fileDay+i/(30*24),temp),false,25000);
                         }
                     }
-
+                    int min = Collections.min(integerArrayList);
+                    int max = Collections.max(integerArrayList);
+                    TextView maxTemp = rootView.findViewById(R.id.tempMax);
+                    TextView minTemp = rootView.findViewById(R.id.tempMin);
+                    maxTemp.setText(String.valueOf(max));
+                    minTemp.setText(String.valueOf(min));
 
 
                 }catch (NullPointerException e){
                     Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT).show();
                 }
+                GridLabelRenderer glr = graph.getGridLabelRenderer();
+                glr.setTextSize(44);
+                glr.setHighlightZeroLines(true);
+                
+                series.setAnimated(true);
+                series.setColor(Color.WHITE);
+                glr.setGridColor(Color.WHITE);
+                glr.setVerticalLabelsColor(Color.WHITE);
+                glr.setHorizontalLabelsColor(Color.WHITE);
+                graph.addSeries(series);
+
+
             }
-            GridLabelRenderer glr = graph.getGridLabelRenderer();
-            glr.setHorizontalLabelsVisible(false);
-            glr.setTextSize(44);
-            glr.setGridColor(Color.WHITE);
-            glr.setVerticalLabelsColor(Color.WHITE);
-            glr.setHorizontalLabelsColor(Color.WHITE);
-            tempNow = rootView.findViewById(R.id.tempNow);
-            humNow = rootView.findViewById(R.id.humNow);
-            tempLast = rootView.findViewById(R.id.tempLast);
-            humLast = rootView.findViewById(R.id.humLast);
+            if(getArguments().getInt(ARG_SECTION_NUMBER)==3){
+                final SharedPreferences sharedPref = getActivity().getApplicationContext().getSharedPreferences("prefs",Context.MODE_PRIVATE);
+                sharedPref.registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
+                    @Override
+                    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                        tempNow.setText(sharedPref.getString("tempNow","0"));
+                        humNow.setText(sharedPref.getString("humNow","0"));
+                        tempLast.setText(sharedPref.getString("tempLast","0"));
+                        humLast.setText(sharedPref.getString("humLast","0"));
+                    }
+                });
+
+                System.out.println("TEMP NOW IN SECTION 2" + tempNow.getText());
+                data = new LinkedHashMap<>();
+                LinkedHashMap<Date,String>tempHash;
+                tempHash = getData();
+                graph = rootView.findViewById(R.id.graph);
+                graph.setBackgroundColor(Color.TRANSPARENT);
+                graph.setTitleColor(Color.WHITE);
+                Date date = Calendar.getInstance().getTime();
+
+                Calendar calendar = Calendar.getInstance();
+                int year = calendar.get(Calendar.YEAR);
+                graph.setTitle("" + year);
+                System.out.println("CALLING INIT");
+
+                graph.setTitleTextSize(55);
+                series = new LineGraphSeries<>();
+                //ArrayList used to take out each temperature out of tempHash to then calculate the minimum and maximum
+                ArrayList<Integer>integerArrayList= new ArrayList<>();
+                try{
+                    double i = 0.0000;
+                    for (Map.Entry<Date, String> e : tempHash.entrySet()) {
+                        //TODO: Test this further,
+                        //TODO: Make the yearly graph show which month the temperatures are at
+                        //Both dates need to be the same format!
+                        //day-month-year
+                        //If xx-xx-xxxx == yy-yy-yyyy
+                        i++;
+                        System.out.println("Dddd" + i);
+                        int fileYear = e.getKey().getYear();
+                        int fileMonth = e.getKey().getMonth();
+                        int nowYear = date.getYear();
+                        if(fileYear==nowYear){
+                            integerArrayList.add(Integer.parseInt(e.getValue()));
+                            System.out.println("LinkedHashMap read: " + e.getKey() + " Temperature" + e.getValue());
+                            int temp = Integer.parseInt(e.getValue());
+                            series.appendData(new DataPoint(fileMonth+1+i/(24*12),temp),false,25000);
+                        }
+                    }
+                    int min = Collections.min(integerArrayList);
+                    int max = Collections.max(integerArrayList);
+                    TextView maxTemp = rootView.findViewById(R.id.tempMax);
+                    TextView minTemp = rootView.findViewById(R.id.tempMin);
+                    maxTemp.setText(String.valueOf(max));
+                    minTemp.setText(String.valueOf(min));
+
+
+                }catch (NullPointerException e){
+                    Toast.makeText(getActivity().getApplicationContext(),"No dates!",Toast.LENGTH_SHORT).show();
+                }
+                GridLabelRenderer glr = graph.getGridLabelRenderer();
+                glr.setTextSize(44);
+                series.setAnimated(true);
+                series.setColor(Color.WHITE);
+                glr.setGridColor(Color.WHITE);
+                glr.setVerticalLabelsColor(Color.WHITE);
+                glr.setHorizontalLabelsColor(Color.WHITE);
+                graph.addSeries(series);
+            }
+
+
 
             FloatingActionButton fab = rootView.findViewById(R.id.floatingActionButton);
+            //This desyncs previous and current temperature and
             fab.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    startMqtt();
+                    getActivity().finish();
                 }
             });
 
@@ -303,26 +442,33 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void messageArrived(String topic, MqttMessage mqttMessage) {
-                    //TODO: Save every message into a file as a hashmap
-                    //Hashmap has the form of (Date,String)
+                    //Move to LinkedLinkedHashMap
+                    //LinkedHashMap has the form of (Date,String)
                     //Date is the date of the measurement, and String is the temperature
 
 
                     Log.w("Debug", mqttMessage.toString());
                     Log.w("Topic",topic);
-
-
+                    SharedPreferences sharedpreferences =getActivity().getApplicationContext().getSharedPreferences("prefs", Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
                     if(topic.equals("sensor/hum")){
                         Log.w("Hum","Humidity received ");
                         humLast.setText(humNow.getText());
                         humNow.setText(mqttMessage.toString());
+
+                        editor.putString("humNow", humNow.getText().toString());
+                        editor.putString("humLast", humLast.getText().toString());
+
+                        editor.apply();
                     }
                     else {
+                        //TODO: If temp new is higher than the current highest temp set it
                         tempLast.setText(tempNow.getText());
-
+                        editor.putString("tempNow", mqttMessage.toString()+"°C");
+                        editor.putString("tempLast", tempLast.getText().toString());
+                        editor.apply();
                         int temp = Integer.parseInt(mqttMessage.toString());
-
-                        series.appendData(new DataPoint(series.getHighestValueX()+1,temp), false, 25);
+                        series.appendData(new DataPoint(series.getHighestValueX()+1,temp), false, 25000);
                         series.setAnimated(true);
                         series.setColor(Color.WHITE);
                         if(series.getHighestValueX()>99){
@@ -335,11 +481,14 @@ public class MainActivity extends AppCompatActivity {
                         Log.w("DATE",date.toString());
                         System.out.println("DATE " + date);
                         Date formattedDate=null;
-                        SimpleDateFormat df = new SimpleDateFormat("-mm-hh-dd-MMM-yyyy");
+                        //Only store 1 value per hour into the file!!!
+                        SimpleDateFormat df = new SimpleDateFormat("hh-dd-MMM-yyyy");
+
                         String dateString = df.format(date);
                         try {
                             formattedDate = df.parse(dateString);
                             data.put(formattedDate,mqttMessage.toString());
+                            System.out.println("Data"  + data);
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
@@ -347,9 +496,9 @@ public class MainActivity extends AppCompatActivity {
                         //append to the temp.mqtt file
                         System.out.println("DATA SIZE" + data.size());
                         tempNow.setText(mqttMessage.toString()+"°C");
-                        HashMap<Date,String>dateStringHashMap = new HashMap<>();
-                        dateStringHashMap.put(formattedDate,mqttMessage.toString());
-                        System.out.println(dateStringHashMap.size());
+                        LinkedHashMap<Date,String>dateStringLinkedHashMap = new LinkedHashMap<>();
+                        dateStringLinkedHashMap.put(formattedDate,mqttMessage.toString());
+                        System.out.println(dateStringLinkedHashMap.size());
                         writeFile(formattedDate,mqttMessage.toString());
                         getData();
                         // Log.w("Parse test",df.parse(dateString).toString());
@@ -371,10 +520,16 @@ public class MainActivity extends AppCompatActivity {
             //Read from the file and write it back into the file together with the new
             //TODO: Optimize this if possible, make it not ask
             //TODO: Sort by date
-            //Hope there are no errors and that HashMap puts in new elements to the end!
+            //Put data into treemap
+            //Hope treemap sorts it out
+            //Hope there are no errors and that LinkedHashMap puts in new elements to the end!
             try
             {
-                HashMap<Date,String>tempMap=getData();
+                LinkedHashMap<Date,String> tempMap=getData();
+                if(tempMap==null){
+                    tempMap = new LinkedHashMap<>();
+                }
+                //tempMap.clear();
                 tempMap.put(date,message);
                 System.out.println("Appended:" +tempMap.toString());
                 FileOutputStream fos = getActivity().getApplicationContext().openFileOutput("map.ser",MODE_PRIVATE);
@@ -386,19 +541,18 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-        private HashMap<Date,String> getData(){
-            HashMap<Date,String> myHashMap=null;
+        private LinkedHashMap<Date,String> getData(){
+            LinkedHashMap<Date,String> myLinkedHashMap=null;
             try
             {
                 FileInputStream fileInputStream = new FileInputStream(getActivity().getApplicationContext().getFilesDir()+"/map.ser");
                 ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-                myHashMap = (HashMap<Date, String>) objectInputStream.readObject();
+                myLinkedHashMap = (LinkedHashMap<Date, String>) objectInputStream.readObject();
             }
             catch(ClassNotFoundException | IOException | ClassCastException e) {
                 e.printStackTrace();
             }
-            System.out.println("READ: " + myHashMap.toString());
-            return myHashMap;
+            return myLinkedHashMap;
         }
 
 

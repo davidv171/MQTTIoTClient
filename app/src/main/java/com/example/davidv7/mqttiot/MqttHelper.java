@@ -29,7 +29,7 @@ import java.util.Arrays;
 public class MqttHelper extends Activity {
     public MqttAndroidClient mqttAndroidClient;
     //TODO: Make server URI dynamic
-    String serverUri = "tcp://164.8.161.30:1883";
+    String serverUri = "tcp://192.168.1.3:1883";
 
     final String clientId = "ExampleAndroidClient";
     final String subscriptionTopic = "sensor/#";
